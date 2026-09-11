@@ -6,6 +6,7 @@
 - 音声・文字起こし・相談記録は **外部に一切送信しません**（インターネット上のサーバーは使いません）
 - 利用料・API料金は **かかりません**
 - 無償・無保証・サポートなし（下記「利用条件」参照）
+- 姉妹ツール：[Careerbot Local ES](https://github.com/KojiOkazaki/careerbot-local-es)（ES添削）／[Careerbot Local Interview Note](https://github.com/KojiOkazaki/careerbot-local-interview-note)（模擬面接の記録・フィードバック）
 
 > **重要**：本ツールは無償で提供され、動作保証および個別サポートはありません。相談記録の保管・削除・管理の責任は、利用者および所属機関にあります。録音前に学生の同意を得てください。
 
