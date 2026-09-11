@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Careerbot Local Note</title>
+<style>
+  :root{
+    --bg:#F2F4F3; --surface:#FFFFFF; --ink:#1B2730; --muted:#66737B; --line:#DDE2E5;
+    --accent:#1E3A8A; --accent-soft:#E6ECF9; --ok:#2A7A5A; --warn:#B0561F; --rec:#C2392B;
+    --radius:6px;
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.7}
+  button{font:inherit;cursor:pointer}
+  button:disabled{cursor:not-allowed;opacity:.45}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  header{display:flex;align-items:baseline;gap:16px;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--surface)}
+  header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.02em}
+  header .local{color:var(--ok);font-size:12px}
+  header .local::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;vertical-align:1px}
+  main{display:grid;grid-template-columns:320px 1fr;gap:24px;padding:24px 28px;max-width:1240px}
+  @media (max-width:860px){main{grid-template-columns:1fr}}
+
+  /* 左：操作 */
+  .rail>section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px}
+  .rail h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--muted)}
+  .check{list-style:none;margin:0;padding:0}
+  .check li{display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--line)}
+  .check li:first-child{border-top:0}
+  .check .mark{width:16px;flex:none;font-weight:700}
+  .check .ok .mark{color:var(--ok)} .check .ng .mark{color:var(--warn)}
+  .check .hint{display:block;color:var(--muted);font-size:12px;line-height:1.5}
+  .field{margin:8px 0}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+  .field input,.field select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius);font:inherit;background:#fff}
+  .timer{font-size:44px;font-weight:200;letter-spacing:.04em;font-variant-numeric:tabular-nums;line-height:1.1;margin:10px 0 4px}
+  .timer.live{color:var(--rec)}
+  .meter{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:12px}
+  .meter i{display:block;height:100%;width:0;background:var(--rec);transition:width .08s}
+  .btn{display:inline-block;padding:9px 16px;border-radius:var(--radius);border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.rec{background:var(--rec);border-color:var(--rec);color:#fff}
+  .btn.wide{width:100%;text-align:center}
+  .btn.small{padding:5px 10px;font-size:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .note{color:var(--muted);font-size:12px;margin:8px 0 0}
+  .sessions{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+  .sessions li{padding:5px 0;border-top:1px solid var(--line)}
+  .sessions li:first-child{border-top:0}
+  .sessions a{color:var(--accent);text-decoration:none}
+  .sessions a:hover{text-decoration:underline}
+
+  /* 右：文書 */
+  .doc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);min-height:70vh;display:flex;flex-direction:column}
+  .doc-head{padding:14px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .doc-head .title{font-weight:600}
+  .doc-head .meta{color:var(--muted);font-size:12px}
+  .tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--line)}
+  .tabs button{background:none;border:0;padding:10px 12px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .doc-body{padding:20px 24px 32px;flex:1}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .empty{color:var(--muted);padding:60px 0;text-align:center;line-height:2}
+  .seg{display:grid;grid-template-columns:48px 96px 1fr;gap:10px;padding:5px 0;border-top:1px dashed var(--line);align-items:start}
+  .seg:first-child{border-top:0}
+  .seg .t{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding-top:3px}
+  .seg .who{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:2px 6px;font-size:12px;text-align:left;color:var(--muted)}
+  .seg .who.C{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+  .seg .who.S{background:#F6F1E4;border-color:transparent;color:#7A5A1A}
+  .seg .txt{margin:0;white-space:pre-wrap}
+  .md{max-width:72ch}
+  .md h2{font-size:15px;margin:22px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+  .md h2:first-child{margin-top:0}
+  .md ul{padding-left:1.4em;margin:6px 0}
+  .md p{margin:6px 0}
+  .busy{color:var(--accent);font-size:13px}
+  .busy::before{content:"";display:inline-block;width:10px;height:10px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;margin-right:8px;vertical-align:-1px;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.busy::before{animation:none}}
+  .err{color:var(--warn);font-size:13px;white-space:pre-wrap}
+  .danger{color:var(--rec);border-color:#F0D6D3}
+  dialog{border:1px solid var(--line);border-radius:var(--radius);padding:20px 24px;max-width:420px;font:inherit}
+  dialog::backdrop{background:rgba(27,39,48,.4)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Careerbot Local Note</h1>
+  <span class="local" id="localBadge">このPCの中だけで処理しています</span>
+</header>
+
+<main>
+  <div class="rail">
+    <section>
+      <h2>準備の確認</h2>
+      <ul class="check" id="checks"><li><span class="mark">…</span><span>確認しています</span></li></ul>
+      <p class="note"><button class="btn small" id="recheck">もう一度確認</button></p>
+    </section>
+
+    <section>
+      <h2>録音</h2>
+      <div class="field"><label for="mic">マイク</label><select id="mic"></select></div>
+      <div class="field"><label for="counselor">カウンセラー名（任意・話者推定の手がかり）</label><input id="counselor" placeholder="例：岡崎"></div>
+      <div class="timer" id="timer">00:00</div>
+      <div class="meter"><i id="level"></i></div>
+      <button class="btn rec wide" id="recBtn">録音を開始</button>
+      <p class="note">録音前に、記録のためにAIで文字起こしすることを学生に伝え、同意を得てください。</p>
+      <p class="note">Zoom等の録音ファイル（m4a / mp3 / wav / webm）から作ることもできます：<br>
+        <input type="file" id="fileInput" accept="audio/*,video/webm,.m4a,.mp3,.wav,.webm,.ogg">
+      </p>
+    </section>
+
+    <section>
+      <h2>これまでの記録</h2>
+      <ul class="sessions" id="sessionList"><li class="note">まだありません</li></ul>
+      <p class="note" id="dataDir"></p>
+    </section>
+  </div>
+
+  <div class="doc">
+    <div class="doc-head">
+      <div><span class="title" id="docTitle">記録</span> <span class="meta" id="docMeta"></span></div>
+      <div class="row" id="docActions" hidden>
+        <button class="btn small" id="dlBtn">Markdownを保存</button>
+        <button class="btn small danger" id="delBtn">この記録を削除</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="on" data-tab="transcript">文字起こし</button>
+      <button data-tab="summary">相談記録（要約）</button>
+      <button data-tab="review">振り返り</button>
+    </div>
+    <div class="doc-body">
+      <div id="status"></div>
+      <div id="pane"></div>
+    </div>
+  </div>
+</main>
+
+<dialog id="confirm">
+  <p id="confirmText"></p>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" id="confirmNo">やめる</button>
+    <button class="btn rec" id="confirmYes">削除する</button>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+let session = null, tab = 'transcript', busy = false;
+
+/* ---------- 準備の確認 ---------- */
+async function loadStatus(){
+  const s = await (await fetch('/api/status')).json();
+  const items = [];
+  const add = (ok, label, hint) => items.push(`<li class="${ok?'ok':'ng'}"><span class="mark">${ok?'✓':'✗'}</span><span>${label}${hint&&!ok?`<span class="hint">${hint}</span>`:''}</span></li>`);
+  add(s.llm.connected, `${s.llm.backend==='ollama'?'Ollama':'LM Studio'}：${s.llm.connected?'接続済み':'接続できません'}`,
+      s.llm.backend==='ollama'?'Ollamaを起動してください（メニューバーのアイコン）':'LM Studioのローカルサーバーを起動してください');
+  add(s.llm.model_available, `LLM：${s.llm.model}${s.llm.model_available?'':'（未取得）'}`,
+      `ターミナルで <code>ollama pull ${s.llm.model}</code> を実行してください`);
+  add(s.whisper.downloaded, `文字起こし：${s.whisper.backend} / ${s.whisper.model}${s.whisper.downloaded?'':'（初回に自動取得）'}`,
+      '初回の文字起こし時に自動でダウンロードします（数分・約1.5GB）');
+  add(true, `外部送信：なし`);
+  add(true, `録音音声：${s.save_audio?'保存する設定です':'文字起こし後に削除'}`);
+  add(true, `メモリ：${s.ram_gb} GB`);
+  $('#checks').innerHTML = items.join('');
+  $('#dataDir').textContent = '保存先：' + s.data_dir;
+  $('#localBadge').textContent = s.mock ? '確認用モード（AIは動きません）' : 'このPCの中だけで処理しています';
+  renderSessions(s.sessions);
+}
+function renderSessions(list){
+  $('#sessionList').innerHTML = list.length ? list.map(id => {
+    const m = id.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/);
+    const label = m ? `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}` : id;
+    return `<li><a href="#" data-id="${id}">${label}</a></li>`;
+  }).join('') : '<li class="note">まだありません</li>';
+  document.querySelectorAll('#sessionList a').forEach(a => a.onclick = e => { e.preventDefault(); openSession(a.dataset.id); });
+}
+$('#recheck').onclick = loadStatus;
+
+/* ---------- マイク ---------- */
+async function listMics(){
+  try{
+    const tmp = await navigator.mediaDevices.getUserMedia({audio:true}); tmp.getTracks().forEach(t=>t.stop());
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
+    $('#mic').innerHTML = devs.map(d=>`<option value="${d.deviceId}">${d.label||'マイク'}</option>`).join('');
+  }catch(e){ $('#mic').innerHTML = '<option>マイクの許可が必要です</option>'; }
+}
+
+/* ---------- 録音 ---------- */
+let rec=null, chunks=[], startAt=0, tick=null, ctx=null, raf=null;
+$('#recBtn').onclick = async () => rec ? stopRec() : startRec();
+
+async function startRec(){
+  const id = $('#mic').value;
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:{deviceId:id?{exact:id}:undefined, echoCancellation:false, noiseSuppression:true}}); }
+  catch(e){ showError('マイクを使えません。Chromeのアドレスバー左のアイコンからマイクを許可してください。'); return; }
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+  rec = new MediaRecorder(stream, mime?{mimeType:mime, audioBitsPerSecond:64000}:{});
+  chunks=[]; rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => { stream.getTracks().forEach(t=>t.stop()); upload(new Blob(chunks,{type:'audio/webm'}), 'recording.webm'); };
+  rec.start(1000);
+  startAt = Date.now();
+  $('#recBtn').textContent = '録音を止めて文字起こし'; $('#recBtn').className='btn primary wide';
+  $('#timer').classList.add('live');
+  tick = setInterval(()=>{ const s=Math.floor((Date.now()-startAt)/1000); $('#timer').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },500);
+  // レベルメーター
+  ctx = new AudioContext(); const src=ctx.createMediaStreamSource(stream); const an=ctx.createAnalyser(); an.fftSize=512; src.connect(an);
+  const buf=new Uint8Array(an.frequencyBinCount);
+  const loop=()=>{ an.getByteTimeDomainData(buf); let sum=0; for(const v of buf){const d=(v-128)/128; sum+=d*d;} const rms=Math.sqrt(sum/buf.length); $('#level').style.width=Math.min(100,rms*400)+'%'; raf=requestAnimationFrame(loop); };
+  loop();
+}
+function stopRec(){
+  clearInterval(tick); cancelAnimationFrame(raf); if(ctx){ctx.close(); ctx=null;}
+  $('#recBtn').textContent='録音を開始'; $('#recBtn').className='btn rec wide'; $('#recBtn').disabled=true;
+  $('#timer').classList.remove('live'); $('#level').style.width='0';
+  rec.stop(); rec=null;
+}
+$('#fileInput').onchange = e => { const f=e.target.files[0]; if(f) upload(f, f.name); e.target.value=''; };
+
+async function upload(blob, name){
+  const fd = new FormData(); fd.append('file', blob, name); fd.append('counselor', $('#counselor').value);
+  session=null; renderDoc();
+  setBusy(`文字起こしをしています。録音時間の 1/3〜1倍ほどかかります。このまま待ってください。`);
+  try{
+    const r = await fetch('/api/transcribe',{method:'POST', body:fd});
+    if(!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    session = await r.json(); tab='transcript';
+    setBusy(''); renderDoc(); loadStatus();
+  }catch(e){ setBusy(''); showError('文字起こしに失敗しました。\n'+e.message); }
+  finally{ $('#recBtn').disabled=false; $('#timer').textContent='00:00'; }
+}
+
+/* ---------- 文書表示 ---------- */
+function setBusy(msg){ busy=!!msg; $('#status').innerHTML = msg?`<p class="busy">${msg}</p>`:''; document.querySelectorAll('.toolbar button').forEach(b=>b.disabled=busy); }
+function showError(msg){ $('#status').innerHTML = `<p class="err">${esc(msg)}</p>`; }
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ft = s => { s=Math.floor(s); return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; };
+
+async function openSession(id){
+  session = await (await fetch('/api/sessions/'+id)).json(); tab='transcript'; $('#status').innerHTML=''; renderDoc();
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { tab=b.dataset.tab; renderDoc(); });
+
+function renderDoc(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  $('#docActions').hidden = !session;
+  if(!session){
+    $('#docTitle').textContent='記録'; $('#docMeta').textContent='';
+    $('#pane').innerHTML = `<div class="empty">録音を始めるか、これまでの記録を開いてください。<br>音声・文字起こし・記録はすべてこのPCに保存されます。</div>`;
+    return;
+  }
+  $('#docTitle').textContent = `相談記録 ${session.created}`;
+  $('#docMeta').textContent = (session.counselor?`担当：${session.counselor}　`:'') + `${session.segments.length}発言`;
+  if(tab==='transcript'){
+    const labeled = session.segments.some(s=>s.speaker);
+    $('#pane').innerHTML = `
+      <div class="toolbar">
+        <button class="btn primary" id="labelBtn">${labeled?'話者をもう一度推定':'話者を推定（カウンセラー／学生）'}</button>
+        <span class="note">ラベルを押すと手で切り替えられます</span>
+      </div>
+      <div id="segs">${session.segments.map(s=>`
+        <div class="seg" data-i="${s.i}">
+          <span class="t">${ft(s.start)}</span>
+          <button class="who ${s.speaker||''}" title="切り替え">${{C:'カウンセラー',S:'学生','?':'不明'}[s.speaker]||'—'}</button>
+          <p class="txt">${esc(s.text)}</p>
+        </div>`).join('') || '<div class="empty">音声から発話を検出できませんでした。</div>'}
+      </div>`;
+    $('#labelBtn').onclick = () => runStep('label','話者を推定しています');
+    document.querySelectorAll('.seg .who').forEach(b => b.onclick = async () => {
+      const seg = session.segments.find(s=>s.i==b.closest('.seg').dataset.i);
+      seg.speaker = {'':'C','?':'C','C':'S','S':'C'}[seg.speaker||''];
+      await fetch(`/api/sessions/${session.id}/segments`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({segments:[seg]})});
+      renderDoc();
+    });
+  }else{
+    const key = tab; const has = !!session[key];
+    const labels = {summary:['相談記録を作成','相談記録を作り直す','相談記録を作成しています'], review:['振り返りを作成','振り返りを作り直す','振り返りを作成しています']}[key];
+    $('#pane').innerHTML = `
+      <div class="toolbar"><button class="btn primary" id="genBtn">${has?labels[1]:labels[0]}</button>
+        ${session.segments.some(s=>s.speaker)?'':'<span class="note">先に「話者を推定」をしておくと精度が上がります</span>'}</div>
+      ${has?`<div class="md">${md(session[key])}</div>`:`<div class="empty">${key==='summary'?'文字起こしから、キャリアセンターの相談記録の形にまとめます。':'カウンセラー自身の内省用に、深掘りできた点や次回聞くとよいことを整理します。'}</div>`}`;
+    $('#genBtn').onclick = () => runStep(key, labels[2]);
+  }
+  document.querySelectorAll('.toolbar button').forEach(b=>b.disabled=busy);
+}
+
+async function runStep(step, msg){
+  setBusy(msg + '。数十秒〜数分かかります。');
+  try{
+    const r = await fetch(`/api/sessions/${session.id}/${step}`,{method:'POST'});
+    if(!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    session = await r.json(); setBusy(''); renderDoc();
+  }catch(e){ setBusy(''); renderDoc(); showError(e.message); }
+}
+
+/* 最小限のMarkdown表示（見出し・箇条書き・段落） */
+function md(text){
+  const out=[]; let ul=false;
+  for(const raw of text.split('\n')){
+    const l=raw.trim();
+    if(!l){ if(ul){out.push('</ul>');ul=false;} continue; }
+    const h=l.match(/^#{1,3}\s+(.*)/);
+    if(h){ if(ul){out.push('</ul>');ul=false;} out.push(`<h2>${esc(h[1])}</h2>`); continue; }
+    const li=l.match(/^[-*・]\s*(.*)/);
+    if(li){ if(!ul){out.push('<ul>');ul=true;} out.push(`<li>${inline(li[1])}</li>`); continue; }
+    if(ul){out.push('</ul>');ul=false;}
+    out.push(`<p>${inline(l)}</p>`);
+  }
+  if(ul) out.push('</ul>');
+  return out.join('');
+}
+const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+
+/* ---------- 保存・削除 ---------- */
+$('#dlBtn').onclick = () => {
+  const who={C:'カウンセラー',S:'学生','?':'不明'};
+  let t=`# 相談記録 ${session.created}\n`+(session.counselor?`担当: ${session.counselor}\n`:'')+'\n';
+  if(session.summary) t+=session.summary+'\n\n';
+  if(session.review) t+='# 振り返り\n\n'+session.review+'\n\n';
+  t+='# 文字起こし\n\n'+session.segments.map(s=>`[${ft(s.start)}] ${s.speaker?who[s.speaker]+'：':''}${s.text}`).join('\n')+'\n';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([t],{type:'text/markdown'})); a.download=`相談記録_${session.id.slice(0,15)}.md`; a.click();
+};
+$('#delBtn').onclick = () => { $('#confirmText').textContent=`${session.created} の記録（文字起こし・要約・振り返り）をこのPCから削除します。元に戻せません。`; $('#confirm').showModal(); };
+$('#confirmNo').onclick = () => $('#confirm').close();
+$('#confirmYes').onclick = async () => { await fetch('/api/sessions/'+session.id,{method:'DELETE'}); $('#confirm').close(); session=null; renderDoc(); loadStatus(); };
+
+loadStatus(); listMics(); renderDoc();
+</script>
+</body>
+</html>
